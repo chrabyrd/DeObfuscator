@@ -1,17 +1,65 @@
 require 'nokogiri'
 require 'open-uri'
 require 'launchy'
+require 'rmagick'
 
 class DeObfuscator
   def initialize(address)
     @response = Nokogiri.parse(open(address))
     @api_strings = @response.text.scan(/static[^;]*ttf/).flatten
+    @return_string = ''
 
     download_font_files
-    edit_html_style
+    build_return_string
+    swap_obfuscated_content
     save_edited_html
     launch_browser
     delete_files
+  end
+
+
+  def build_return_string
+    obfuscated_text_array = @response.at_xpath('//h1').text.chars
+
+    obfuscated_text_array.each do |l|
+      create_image_from_text(l)
+      deobfuscated_character = return_text_from_image
+
+      @return_string << deobfuscated_character
+    end
+
+    p @return_string
+  end
+
+  def return_text_from_image
+    input = './tmp_text_img.png'
+    `tesseract #{input} tmp_text_from_img -l  eng+hacker_rank -c tessedit_char_whitelist=ABCDEFGHIJKLKMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890 -psm 10`
+    File.readlines('tmp_text_from_img.txt')[0].chars.first
+  end
+
+  def create_image_from_text(text)
+    str = text # I don't know why, but RMagick panics unless I include this line
+
+    canvas = Magick::ImageList.new
+
+    canvas.new_image(200, 200)
+
+    text = Magick::Draw.new
+    text.annotate(canvas, 0,0,2,2, str) {
+      self.font = './font_1.ttf'
+      self.gravity = Magick::CenterGravity
+      self.density = '800'
+      self.pointsize = 16
+    }
+
+    text.annotate(canvas, 0,0,2,2, str) {
+      self.font = './font_2.ttf'
+      self.gravity = Magick::CenterGravity
+      self.density = '800'
+      self.pointsize = 16
+    }
+
+    canvas.write('tmp_text_img.png') {self.units= Magick::PixelsPerInchResolution; self.density = "800"}
   end
 
   def download_font_files
@@ -23,14 +71,9 @@ class DeObfuscator
     end
   end
 
-  def edit_html_style
-    style = @response.at_xpath('//style')
-
-    @api_strings.each_with_index do |str, idx|
-      style.content = style.content.sub str, "./font_#{idx}.ttf"
-    end
-
-    style.content = style.content.sub 'h1', 'h2'
+  def swap_obfuscated_content
+    h1 = @response.at_xpath('//h1')
+    h1.content = @return_string
   end
 
   def save_edited_html
@@ -38,7 +81,6 @@ class DeObfuscator
   end
 
   def launch_browser
-    Launchy.open('http://protext.hackerrank.com/')
     Launchy.open('./tmp.html')
   end
 
@@ -48,6 +90,8 @@ class DeObfuscator
     File.delete('./font_0.ttf')
     File.delete('./font_1.ttf')
     File.delete('./font_2.ttf')
+    File.delete('./tmp_text_img.png')
+    File.delete('./tmp_text_from_img.txt')
   end
 end
 
