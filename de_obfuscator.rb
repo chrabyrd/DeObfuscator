@@ -21,14 +21,12 @@ class DeObfuscator
   def build_return_string
     obfuscated_text_array = @response.at_xpath('//h1').text.chars
 
-    obfuscated_text_array.each do |l|
-      create_image_from_text(l)
+    obfuscated_text_array.each do |char|
+      create_image_from_text(char)
       deobfuscated_character = return_text_from_image
 
       @return_string << deobfuscated_character
     end
-
-    p @return_string
   end
 
   def return_text_from_image
@@ -41,10 +39,9 @@ class DeObfuscator
     str = text # I don't know why, but RMagick panics unless I include this line
 
     canvas = Magick::ImageList.new
-
     canvas.new_image(200, 200)
-
     text = Magick::Draw.new
+    
     text.annotate(canvas, 0,0,2,2, str) {
       self.font = './font_1.ttf'
       self.gravity = Magick::CenterGravity
