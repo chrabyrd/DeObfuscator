@@ -25,42 +25,54 @@ class DeObfuscator
       create_image_from_text(char)
       deobfuscated_character = return_text_from_image
 
-      @return_string << deobfuscated_character
+      p @return_string << deobfuscated_character
     end
   end
 
   def return_text_from_image
     input = './tmp_text_img.png'
-    `tesseract #{input} tmp_text_from_img -l  eng+hacker_rank -c tessedit_char_whitelist=ABCDEFGHIJKLKMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890 -psm 10`
-    File.readlines('tmp_text_from_img.txt')[0].chars.first
+    `tesseract #{input} tmp_text_from_img -l  eng+hacker_rank -c tessedit_char_whitelist=ABCDEFGHIJKLKMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890 -psm 6`
+    File.readlines('tmp_text_from_img.txt')[0].chars.size == 3 ? " " :
+      File.readlines('tmp_text_from_img.txt')[0].chars[-2]
   end
 
   def create_image_from_text(text)
     str = text # I don't know why, but RMagick panics unless I include this line
 
     canvas = Magick::ImageList.new
-    canvas.new_image(200, 200)
+    canvas.new_image(500, 200)
     text = Magick::Draw.new
-    
-    text.annotate(canvas, 0,0,2,2, str) {
+
+    text.annotate(canvas, 0,0,20,0, 'Oo') {
+      self.font = './font_0.ttf'
+      self.gravity = Magick::WestGravity
+      self.density = '800'
+      self.pointsize = 16
+    }
+
+    text.annotate(canvas, 0,0,20,0, str) {
       self.font = './font_1.ttf'
-      self.gravity = Magick::CenterGravity
+      self.gravity = Magick::EastGravity
       self.density = '800'
       self.pointsize = 16
     }
 
-    text.annotate(canvas, 0,0,2,2, str) {
+    text.annotate(canvas, 0,0,20,0, str) {
       self.font = './font_2.ttf'
-      self.gravity = Magick::CenterGravity
+      self.gravity = Magick::EastGravity
       self.density = '800'
       self.pointsize = 16
     }
 
-    canvas.write('tmp_text_img.png') {self.units= Magick::PixelsPerInchResolution; self.density = "800"}
+    canvas.write('tmp_text_img.png') {
+      self.units= Magick::PixelsPerInchResolution; self.density = "800"
+    }
   end
 
   def download_font_files
-    external_apis = @api_strings.map { |text| "http://protext.hackerrank.com/#{text}"}
+    external_apis = @api_strings.map {
+      |text| "http://protext.hackerrank.com/#{text}"
+    }
 
     external_apis.each_with_index do |api, idx|
       reply = open(api, 'Cookie' => 'X-VALID=TRUE').read
